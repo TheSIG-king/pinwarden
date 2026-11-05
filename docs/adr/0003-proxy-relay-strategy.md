@@ -1,6 +1,6 @@
 # ADR-0003: Proxy relay strategy — raw JSON-RPC relay with typed parsing of intercepted methods
 
-- Status: Proposed
+- Status: Accepted (maintainer, 2026-11-05)
 - Date: 2026-11-05
 
 ## Context

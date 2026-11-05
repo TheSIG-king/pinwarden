@@ -1,6 +1,6 @@
 # Architecture
 
-Status: DRAFT — pending maintainer validation. Decisions referenced here are recorded in `docs/adr/`.
+Status: Accepted (maintainer, 2026-11-05) — living document, revised each phase. Decisions referenced here are recorded in `docs/adr/`.
 
 ## 1. One-paragraph summary
 

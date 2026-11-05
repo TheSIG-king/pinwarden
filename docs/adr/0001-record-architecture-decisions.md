@@ -1,6 +1,6 @@
 # ADR-0001: Record architecture decisions
 
-- Status: Proposed
+- Status: Accepted (maintainer, 2026-11-05)
 - Date: 2026-11-05
 
 ## Context

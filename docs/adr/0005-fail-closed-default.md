@@ -1,6 +1,6 @@
 # ADR-0005: Fail closed by default
 
-- Status: Proposed
+- Status: Accepted (maintainer, 2026-11-05)
 - Date: 2026-11-05
 
 ## Context

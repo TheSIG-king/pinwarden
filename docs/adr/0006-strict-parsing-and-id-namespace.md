@@ -1,6 +1,6 @@
 # ADR-0006: Strict parsing, validated re-serialization and the gateway id namespace
 
-- Status: Proposed
+- Status: Accepted (maintainer, 2026-11-05)
 - Date: 2026-11-05
 
 ## Context

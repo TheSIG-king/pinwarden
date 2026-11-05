@@ -1,6 +1,6 @@
 # Threat Model
 
-Status: DRAFT — pending maintainer validation
+Status: Accepted (maintainer, 2026-11-05) — living document, revised each phase
 
 Scope: `pinwarden` MVP (stdio + Streamable HTTP relay, pinning, static detection, policy,
 audit) as described in `docs/ARCHITECTURE.md`.

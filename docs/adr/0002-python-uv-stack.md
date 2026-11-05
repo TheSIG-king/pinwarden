@@ -1,6 +1,6 @@
 # ADR-0002: Python 3.12 + uv stack and runtime dependencies
 
-- Status: Proposed
+- Status: Accepted (maintainer, 2026-11-05)
 - Date: 2026-11-05
 
 ## Context

@@ -1,6 +1,6 @@
 # ADR-0004: Canonical schema hashing and the `mcp.lock` format
 
-- Status: Proposed
+- Status: Accepted (maintainer, 2026-11-05)
 - Date: 2026-11-05
 
 ## Context

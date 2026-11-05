@@ -3,8 +3,12 @@
 Status: DRAFT — pending maintainer validation
 
 Scope: `pinwarden` MVP (stdio + Streamable HTTP relay, pinning, static detection, policy,
-audit) as described in `docs/ARCHITECTURE.md`. OWASP mappings are placeholders until checked
-against official sources (`docs/research/SOURCES.md`).
+audit) as described in `docs/ARCHITECTURE.md`.
+
+**OWASP tags are provisional.** IDs/titles come only from `docs/research/SOURCES.md`.
+OWASP MCP Top 10 is **beta** (titles may change; re-check before release). Agentic Top 10
+(ASI) IDs are given without titles: **titles pending verification against the official PDF**.
+The audit log as a whole addresses MCP08:2025 *Lack of Audit and Telemetry* (beta, provisional).
 
 ## 1. Assets
 
@@ -72,18 +76,24 @@ flowchart LR
 | Spoofing | Server shadows another server's tool name | Cross-server collision check against lockfile (exact, case-folded, confusable-normalized) | Collision with servers not in the lockfile |
 | Spoofing | Web page calls local HTTP listener | Bind 127.0.0.1, `Origin` check | Other local processes |
 | Tampering | Rug-pull: schema changes after approval | Full-schema JCS hash pin; drift = hide + alert + diff | Behaviour change without schema change |
+| Tampering | Parse differential: duplicate keys (`{"name":"a","name":"b"}`), `NaN`, so the gateway checks one object and the server executes another | Strict parse of every frame (dup keys / non-finite rejected → JSON-RPC error); allowed `tools/call` forwarded as re-serialization of the validated object (ADR-0006) | Server-side parser quirks on valid, unambiguous JSON |
+| Spoofing | Peer forges a response to a gateway request (e.g. accepts its own elicitation) or collides ids (`1` vs `1.0`) | Reserved `pinwarden-` id prefix for all gateway requests, peer use rejected; pending table keyed by (JSON type, raw value) | — |
+| Tampering | Server lists the same tool name twice (benign + malicious variant) | Duplicate name within one server → all variants hidden, alert | — |
+| Tampering | New tool-related method in the `tools/` namespace bypasses H1/H2 | Unknown `tools/*` methods denied in enforce | Forward-compat cost: new revisions need support first |
 | Tampering | Lockfile/policy modified | Strict validation, file is user-owned | Same-UID server (A5) |
 | Repudiation | "The agent never called that" | JSONL audit of every call with decision + rule | Log is not tamper-evident (crypto-chaining is roadmap) |
 | Info disclosure | Secrets in audit log | Masking by key name + value patterns, args hash | Unknown secret formats |
 | Info disclosure | Exfil via args (URL, path) | Domain/path allowlists, regex | Args not covered by a constraint |
 | DoS | Huge tools/list, endless pagination, giant messages | Size/page/time limits, fail closed | Upstream can still deny service to itself |
+| DoS | `list_changed` flood forcing endless re-fetch/re-scan | Coalescing + rate cap (configurable default) | Calls may wait up to one interval |
+| DoS | Crafted schema crashing hashing (int > 2^53, lone surrogate) | Unhashable → `UNPINNED`/hidden, no hook crash | — |
 | DoS | ReDoS in detection/policy regex | Linear-time patterns, input caps | User-supplied policy regexes (validated, length-capped) |
 | Elevation | Poisoned description steers LLM to dangerous calls | Static detection at approval; policy deny/confirm at call | Semantic poisoning (§7) |
 
 ## 6. Target attacks
 
 ### T1 — Full-schema poisoning
-`OWASP-MCP: TBD` · `OWASP-ASI: TBD`
+`OWASP-MCP (beta, provisional): MCP03:2025 Tool Poisoning` · `OWASP-ASI: ASI01` (title pending verification)
 
 - **Scenario.** A server hides instructions not only in `description` but anywhere the client
   may forward to the model: parameter descriptions, `enum` values, `default`s, `title`s,
@@ -100,7 +110,7 @@ flowchart LR
   on verbose legitimate servers. Measured, not claimed: see `bench/`.
 
 ### T2 — Rug-pull (post-approval schema change)
-`OWASP-MCP: TBD` · `OWASP-ASI: TBD`
+`OWASP-MCP (beta, provisional): MCP03:2025 Tool Poisoning, MCP04:2025 Software Supply Chain Attacks & Dependency Tampering` · `OWASP-ASI: ASI04` (title pending verification)
 
 - **Scenario.** Server is benign at approval; an update (new package version, remote change,
   or a `tools/list_changed` mid-session) alters a description, adds a parameter, or widens an enum.
@@ -112,9 +122,12 @@ flowchart LR
 - **Residual risk.** Server-side behaviour change with identical schema (§7); a server serving
   different schemas to different clients is still caught only on what *this* gateway sees;
   the user may re-approve without reading the diff; same-UID lockfile tampering (A5).
+- **OPEN DECISION (maintainer, ADR-0004).** Drift of `initialize.instructions` is only a
+  `WARN` although it reaches the LLM, and `_meta` is excluded from the pin. Until decided, a
+  rug-pull carried in either is detected but **not blocked**.
 
 ### T3 — Tool shadowing / name collision
-`OWASP-MCP: TBD` · `OWASP-ASI: TBD`
+`OWASP-MCP (beta, provisional): MCP03:2025 Tool Poisoning` · `OWASP-ASI: ASI02` (title pending verification)
 
 - **Scenario.** Server B exposes `send_email` (same as trusted server A), or `send_emaіl` with
   a Cyrillic `і`, or a description saying "always use this instead of A's tool", so the LLM
@@ -128,21 +141,36 @@ flowchart LR
   (different name, "better" description) is only caught by heuristic rules.
 
 ### T4 — Path traversal via tool arguments
-`OWASP-MCP: TBD` · `OWASP-ASI: TBD`
+`OWASP-MCP (beta, provisional): no exact entry` · `OWASP-ASI: ASI02` (title pending verification)
 
 - **Scenario.** A manipulated LLM calls `read_file(path="../../.ssh/id_rsa")`, an absolute
   path, a `file://` URI, a percent-encoded or symlinked path, to read outside the intended
-  workspace.
+  workspace. Motivating example: CVE-2025-53109 (symlink escape) and CVE-2025-53110
+  (path-prefix bypass) in the reference Filesystem MCP server (`docs/research/SOURCES.md`) —
+  a server's own directory check cannot be relied upon.
 - **Preconditions.** Server exposes a filesystem-capable tool; LLM is influenced (poisoned
   content, injected result).
-- **Gateway control.** Policy `path_allowlist` constraint on named arguments (JSON pointer):
-  reject NUL bytes, decode `file://`/percent-encoding, expand `~`, reject relative paths unless a
-  base is configured, lexical normalization, then require containment in an allowed root.
-  Optional `resolve_symlinks: true` (stdio/local only) uses `realpath`. Violations → deny with rule id.
-- **Residual risk.** Only arguments named in policy are checked; the server may resolve paths
-  against its own cwd or a different filesystem (container, remote); TOCTOU/symlink races after
-  the check; Windows path forms (UNC, `\\?\`) need dedicated tests; the server itself may ignore
-  its own sandbox.
+- **Gateway control.** Policy `path_allowlist` on named arguments (JSON pointer), in order:
+  1. reject NUL bytes; decode `file://`; **percent-decode exactly once, deny if any `%` remains**
+     (blocks double encoding; filenames containing `%` are an accepted false positive);
+  2. expand `~`; reject relative paths unless a base is configured (then join to it);
+  3. **no lexical `..` normalization before resolution** (`a/link/..` ≠ `a`);
+  4. `resolve_symlinks: true` **by default** for stdio servers (same local FS): `realpath`
+     the path; if it does not exist, resolve the **longest existing prefix** and append the
+     rest, denying any `..` in that unresolved remainder;
+  5. compare against allowed roots (themselves resolved at load) by **path components**, not
+     string prefix (CVE-2025-53110 class); case-folded on case-insensitive filesystems.
+  For remote (HTTP) servers the gateway's FS is not the server's: `resolve_symlinks` is off and
+  any `..` component is denied. Violations → deny with rule id.
+- **Explicit test items.** Windows: drive-relative `C:x`, UNC `\\server\share` and `\\?\`,
+  ADS `file::$DATA`, 8.3 short names (`PROGRA~1`), trailing dots/spaces (`secret.txt.`,
+  `dir `); case-insensitive FS (NTFS, default APFS): `/Allowed` vs `/allowed`.
+- **Residual risk.** **TOCTOU symlink race**: the gateway checks at time T, the server opens at
+  T+δ; anyone able to write inside an allowed root (including the server) can swap in a symlink
+  between the two. The gateway does not perform the open and cannot fully close this;
+  mitigation is to sandbox the server (container / mount namespace / separate user exposing
+  only the allowed roots). Also: only arguments named in policy are checked; the server may
+  resolve paths against its own cwd; remote servers get lexical checks only.
 
 ## 7. Out of scope / not defended (MVP)
 

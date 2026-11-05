@@ -15,15 +15,20 @@ reproducible across Python versions and platforms, and a lockfile a human can re
   `inputSchema` (all nested properties, `enum`, `default`, `$defs`, `examples`…),
   `outputSchema`, `annotations`, `icons`, **and any unknown/future field**. Deny-by-default:
   a field we did not anticipate is pinned rather than ignored.
-- **Excluded: `_meta` only**, because the spec reserves it for implementation metadata that may
-  change per request (it is hashed separately as `meta_hash`; drift there is a `WARN`, not a block).
-- Also hashed per server: `serverInfo` and `instructions` from `initialize` (drift = `WARN` in
-  MVP, since `instructions` reaches the LLM; may become blocking — open question).
+- **Excluded (provisional, see open decision): `_meta`**, hashed separately as `meta_hash`
+  (drift = `WARN`). Per server, `serverInfo` and `initialize.instructions` are hashed (drift = `WARN`).
+- **Unhashable tool** (`rfc8785` raises on integers beyond ±2^53 or lone surrogates): status
+  `UNPINNED`, hidden, `ERROR` event — never a hook crash (ADR-0005). `approve` refuses it.
 - **Lockfile `mcp.lock`**: JSON (pretty, sorted keys, LF), next to `gateway.yaml` by default
   (`--lock` to override), written atomically (temp file + rename), created only by
   `pinwarden approve`. Content: `lock_version`, `hash_alg`, and per server → per tool:
   `hash`, `meta_hash`, `approved_at`, `accepted_rules` (detection rule ids explicitly accepted),
   and the canonical `snapshot` (needed to render a readable diff on drift).
+
+## Open decision (maintainer)
+Not resolved here: (a) should drift of `initialize.instructions` block rather than `WARN`
+(it reaches the LLM); (b) should `_meta` stay excluded from the pin (some clients may surface
+it). Both are listed as T2 residual risk in THREAT_MODEL until decided.
 
 ## Alternatives considered
 - **`json.dumps(sort_keys=True, separators=(',',':'), ensure_ascii=False)`**: zero dependency,
@@ -32,8 +37,7 @@ reproducible across Python versions and platforms, and a lockfile a human can re
   non-Python tooling. JCS is a published standard with test vectors.
 - **Allowlist of fields** (name/description/inputSchema only): misses `outputSchema`,
   `annotations`, `title` and future fields — the exact gap rug-pulls exploit.
-- **Hash only, no snapshot**: smaller file, but drift could not be explained (feature 2 requires
-  a readable diff).
+- **Hash only, no snapshot**: drift could not be explained as a readable diff.
 - **TOML/YAML lockfile**: YAML parsing is a larger attack surface; JSON maps 1:1 to the data.
 
 ## Consequences

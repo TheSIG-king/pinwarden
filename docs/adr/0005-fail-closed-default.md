@@ -12,18 +12,22 @@ Default mode is `enforce`. In enforce mode, any tool-related situation the gatew
 positively validate results in **deny**:
 - invalid config/policy → refuse to start (exit non-zero, error on stderr);
 - missing/corrupt `mcp.lock` → start but expose no tools, with a hint to run `approve`;
-- unpinned, drifted or shadowing tool → hidden from `tools/list`, calls refused;
+- unpinned, unhashable, drifted or shadowing tool, or a name duplicated within one server's
+  `tools/list` → hidden from `tools/list` (all tools with that name), calls refused;
 - exception or timeout in any hook → deny that message;
-- unparseable intercepted message, size/pagination limits exceeded → JSON-RPC error;
+- unparseable/non-strict message (ADR-0006), batch, size/pagination limits → JSON-RPC error;
+- unknown method under `tools/*` / `notifications/tools/*` → denied (ADR-0003);
 - confirmation not possible (no elicitation support, timeout, decline) → deny;
 - audit sink write failure → deny `tools/call` (an unlogged call is not allowed).
 Refusals use fixed gateway-authored text and never echo server-provided content.
 
 `monitor` mode (global or per server) is the explicit opt-out: same evaluation, decisions are
-logged as `would_deny` but traffic flows. Mode is recorded on every audit event.
+logged as `would_deny` but traffic flows. **Monitor never blocks on internal errors**: on a hook
+exception it forwards the original message after recording `decision=error` (audit, or stderr
+if the sink is down). Protocol-safety rejections (strict parse, batch, size) apply in both modes.
 
-Scoped exception: non-tool methods and unknown methods are passthrough (ADR-0003); invalid
-YAML never falls back to "allow all".
+Scoped exception: unknown methods outside `tools/*` pass through, audited (ADR-0003);
+invalid YAML never falls back to "allow all".
 
 ## Alternatives considered
 - **Fail open by default**: better UX, but silently disables protection precisely under attack

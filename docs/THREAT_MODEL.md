@@ -67,7 +67,10 @@ flowchart LR
 - A5. **Same-UID stdio servers can tamper with AS4** (rewrite `mcp.lock`, policy). The MVP does
   not sandbox upstream processes. Documented mitigation: run upstream servers in a container
   or as a separate user, keep config files read-only to them. This is a known gap, not a solved one.
-- A6. Elicitation prompts are rendered faithfully by the client to the human.
+  *(Accepted as the MVP mitigation by the maintainer, 2026-11-05.)*
+- A6. Elicitation prompts are rendered faithfully by the client to the human. Clients without
+  elicitation support cannot confirm: `action: confirm` calls are **denied** (maintainer
+  decision, 2026-11-05; OS-notification fallback is roadmap, not MVP).
 
 ## 5. STRIDE-lite
 
@@ -122,9 +125,9 @@ flowchart LR
 - **Residual risk.** Server-side behaviour change with identical schema (§7); a server serving
   different schemas to different clients is still caught only on what *this* gateway sees;
   the user may re-approve without reading the diff; same-UID lockfile tampering (A5).
-- **OPEN DECISION (maintainer, ADR-0004).** Drift of `initialize.instructions` is only a
-  `WARN` although it reaches the LLM, and `_meta` is excluded from the pin. Until decided, a
-  rug-pull carried in either is detected but **not blocked**.
+- **Decided (maintainer, 2026-11-05, ADR-0004).** Drift of `initialize.instructions` or of a
+  tool's `_meta` **blocks** in enforce mode, like any tool drift. `serverInfo` drift is `WARN`
+  only (it changes on legitimate upgrades and is not instructions to the LLM).
 
 ### T3 — Tool shadowing / name collision
 `OWASP-MCP (beta, provisional): MCP03:2025 Tool Poisoning` · `OWASP-ASI: ASI02` (title pending verification)

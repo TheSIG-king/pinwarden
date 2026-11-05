@@ -15,8 +15,11 @@ reproducible across Python versions and platforms, and a lockfile a human can re
   `inputSchema` (all nested properties, `enum`, `default`, `$defs`, `examples`…),
   `outputSchema`, `annotations`, `icons`, **and any unknown/future field**. Deny-by-default:
   a field we did not anticipate is pinned rather than ignored.
-- **Excluded (provisional, see open decision): `_meta`**, hashed separately as `meta_hash`
-  (drift = `WARN`). Per server, `serverInfo` and `initialize.instructions` are hashed (drift = `WARN`).
+- **`_meta`** is hashed separately as `meta_hash` (so the tool hash stays comparable across
+  clients); **drift of `meta_hash` blocks like tool drift** (enforce). Per server,
+  `initialize.instructions` is hashed and **its drift blocks** (all tools of that server hidden,
+  enforce); `serverInfo` is hashed with drift = `WARN` only (its `version` changes on every
+  legitimate upgrade and it does not reach the LLM as instructions).
 - **Unhashable tool** (`rfc8785` raises on integers beyond ±2^53 or lone surrogates): status
   `UNPINNED`, hidden, `ERROR` event — never a hook crash (ADR-0005). `approve` refuses it.
 - **Lockfile `mcp.lock`**: JSON (pretty, sorted keys, LF), next to `gateway.yaml` by default
@@ -25,10 +28,11 @@ reproducible across Python versions and platforms, and a lockfile a human can re
   `hash`, `meta_hash`, `approved_at`, `accepted_rules` (detection rule ids explicitly accepted),
   and the canonical `snapshot` (needed to render a readable diff on drift).
 
-## Open decision (maintainer)
-Not resolved here: (a) should drift of `initialize.instructions` block rather than `WARN`
-(it reaches the LLM); (b) should `_meta` stay excluded from the pin (some clients may surface
-it). Both are listed as T2 residual risk in THREAT_MODEL until decided.
+## Maintainer decisions (2026-11-05)
+- `initialize.instructions` drift **blocks** (it reaches the LLM).
+- `_meta` drift **blocks** (clients may act on it, e.g. UI resource URIs).
+- `mcp.lock` **is meant to be committed** to version control, like a dependency lockfile, so
+  approvals are reviewable in PRs.
 
 ## Alternatives considered
 - **`json.dumps(sort_keys=True, separators=(',',':'), ensure_ascii=False)`**: zero dependency,

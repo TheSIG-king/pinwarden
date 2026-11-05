@@ -14,7 +14,7 @@ htmlcov/
 .env.*
 !.env.example
 *.jsonl.log
-audit*.jsonl
+/audit*.jsonl
 bench/results/tmp/
 .claude/settings.local.json
 .claude/worktrees/

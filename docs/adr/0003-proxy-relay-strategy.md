@@ -31,7 +31,7 @@ not understand creates confusing failures and pushes users to bypass it.
 
 ## Consequences
 - We own: newline framing and size limits (stdio), SSE parsing/re-emission and session header
-  handling (HTTP), request-id correlation, gateway-originated ids (`mcpgw-` prefix).
+  handling (HTTP), request-id correlation, gateway-originated ids (`pinwarden-` prefix).
 - Unknown methods are passthrough by design; this is a conscious exception to fail-closed
   (ADR-0005) limited to non-tool methods, and is audited.
 - JSON-RPC batches (removed in recent protocol revisions) are rejected with an error if received.

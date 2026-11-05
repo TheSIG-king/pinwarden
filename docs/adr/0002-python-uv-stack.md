@@ -14,12 +14,12 @@ Python ≥3.12, packaged with **uv** (`uv.lock` committed, `src/` layout, entry 
 Runtime dependencies (all pinned via `uv.lock`):
 | Package | Why | Used by |
 |---|---|---|
-| `mcp` (2.3.x) | Typed protocol models for intercepted methods, protocol version constants; transitively brings `httpx`, `starlette`, `uvicorn`, `anyio` | proxy |
+| `mcp` (`>=2.3,<3`; exact version in `uv.lock`) | Typed protocol models for intercepted methods, protocol version constants; transitively brings `httpx`, `starlette`, `uvicorn`, `anyio` | proxy |
 | `pydantic` v2 | Strict validation of config, policy, lockfile, audit events | all |
 | `pyyaml` | `gateway.yaml`/`policy.yaml`, `safe_load` only | policy, config |
 | `structlog` | Structured stderr diagnostics and JSONL rendering with one processor chain | audit, cli |
-| `rfc8785` | RFC 8785 JSON canonicalization (ADR-0004); small, pure Python, no deps | pinning |
-| `httpx`, `starlette`, `uvicorn` | Phase 2 HTTP proxy; declared **directly** (not relied on transitively) because we import them | proxy/http |
+| `rfc8785` | RFC 8785 JSON canonicalization (ADR-0004); small, pure Python, no deps. **Added in Phase 2** | pinning |
+| `httpx`, `starlette`, `uvicorn` | HTTP proxy. **To be declared directly in Phase 6** (when first imported), not relied on transitively | proxy/http |
 
 Optional extra `otel`: `opentelemetry-sdk` + `opentelemetry-exporter-otlp`. The JSONL format is
 OTel-compatible on its own; the SDK is only needed to *export* to a collector, and it is a
@@ -29,7 +29,8 @@ Not a dependency: CLI framework (stdlib `argparse` is enough), Unicode confusabl
 (TR39 subset vendored as generated data with its licence notice).
 
 Dev: pytest, pytest-asyncio, hypothesis, ruff, mypy (strict on `src/`), pre-commit
-(+ detect-secrets), pip-audit in CI. Docker: `python:3.12-slim`, non-root user, uv-built venv.
+(+ detect-secrets, pinned in `uv.lock`). Planned, not yet in CI: `pip-audit` (Phase 6).
+Dependabot keeps GitHub Actions SHAs and `uv.lock` up to date. Docker: `python:3.12-slim`, non-root user, uv-built venv.
 
 ## Alternatives considered
 - **TypeScript**: first-class SDK too, but maintainer productivity and hypothesis-style testing favour Python.
@@ -39,5 +40,5 @@ Dev: pytest, pytest-asyncio, hypothesis, ruff, mypy (strict on `src/`), pre-comm
 
 ## Consequences
 - Startup time of a Python process per stdio server (measured in `bench/`, not assumed).
-- Pinning `mcp` to `2.3.x` exposes us to SDK API churn; mitigated by ADR-0003 (we use only its types).
+- Allowing `mcp` `>=2.3,<3` (exact pin in `uv.lock`) exposes us to SDK API churn; mitigated by ADR-0003 (we use only its types).
 - **To verify before Phase 1**: exact `mcp` 2.3.0 module paths for types and its Python floor.

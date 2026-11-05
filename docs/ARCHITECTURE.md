@@ -67,7 +67,7 @@ src/pinwarden/
 
 `pinning`, `detection`, `policy`, `audit` are **pure, synchronous, I/O-free cores** (except
 lockfile/YAML loading and the sink). All of `src/` is type-checked with `mypy --strict`
-(CLAUDE.md). `proxy` is the only async, I/O-heavy package. This keeps ~80 % of the logic unit-testable without processes.
+(CLAUDE.md). `proxy` is the only async, I/O-heavy package. This keeps most of the logic unit-testable without processes.
 
 ## 4. Message flow
 
@@ -152,7 +152,7 @@ to run `pinwarden diff <server>`. The drifted text is **never** echoed to the cl
 For policy rules with `action: confirm`, the gateway sends an `elicitation/create` request to
 the client (only if the client declared the `elicitation` capability at `initialize`). The
 message is gateway-authored (tool, server, truncated arguments, matched rule) and never includes
-server-provided text. Gateway-originated request ids use a reserved prefix (`mcpgw-<uuid4>`) so
+server-provided text. Gateway-originated request ids use a reserved prefix (`pinwarden-<uuid4>`) so
 they cannot collide with client ids. No elicitation capability → deny (enforce) / log (monitor).
 Timeout 120 s → deny. Out-of-band confirmation (OS notification, TTY) is roadmap.
 
